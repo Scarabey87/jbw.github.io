@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nordic SCADA</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Экран входа -->
+    <div id="login-screen" class="screen active">
+        <div class="login-container">
+            <h1>Nordic SCADA</h1>
+            <select id="user-role">
+                <option value="operator">Оператор</option>
+                <option value="admin">Администратор</option>
+            </select>
+            <input type="password" id="password-input" placeholder="Пароль" style="display:none;">
+            <button id="login-btn">Войти</button>
+            <p id="login-error" class="error"></p>
+        </div>
+    </div>
+
+    <!-- Основной интерфейс -->
+    <div id="main-interface" class="screen">
+        <!-- Боковое меню -->
+        <aside class="sidebar">
+            <div class="menu-section">
+                <h3>Меню</h3>
+                <ul id="main-menu">
+                    <li data-module="devices"><span class="icon">🔌</span> Устройства</li>
+                    <li data-module="settings" class="admin-only"><span class="icon">⚙️</span> Настройки</li>
+                    <li data-module="alarms"><span class="icon">⚠️</span> Аварии</li>
+                    <li data-module="io-monitor" class="admin-only"><span class="icon">📊</span> I/O Монитор</li>
+                    <li data-module="graphs"><span class="icon">📈</span> Графики</li>
+                </ul>
+            </div>
+            <div id="dynamic-modules" class="menu-section">
+                <!-- Динамические модули -->
+            </div>
+            <div class="user-info">
+                <span id="current-user">Гость</span>
+                <button id="logout-btn">Выход</button>
+            </div>
+        </aside>
+
+        <!-- Основная рабочая область -->
+        <main class="workspace">
+            <!-- Панель устройств -->
+            <div id="devices-panel" class="module-panel active">
+                <div class="panel-header">
+                    <h2>Устройства</h2>
+                    <button id="add-device-btn" class="admin-only">+ Добавить устройство</button>
+                </div>
+                <div id="devices-list" class="devices-grid">
+                    <!-- Список устройств -->
+                </div>
+            </div>
+
+            <!-- Мнемосхема устройства -->
+            <div id="schema-panel" class="module-panel">
+                <div class="panel-header">
+                    <button id="back-to-devices">← Назад</button>
+                    <h2 id="schema-title">Мнемосхема</h2>
+                    <div class="schema-controls">
+                        <button id="save-schema-btn" class="admin-only">💾 Сохранить</button>
+                        <button id="toggle-library-btn" class="admin-only">📚 Библиотека</button>
+                        <button id="zoom-in">+</button>
+                        <button id="zoom-out">−</button>
+                        <button id="toggle-grid">Сетка</button>
+                    </div>
+                </div>
+                <div id="schema-canvas-container" class="canvas-container">
+                    <div id="schema-canvas" class="schema-canvas">
+                        <!-- Элементы мнемосхемы -->
+                    </div>
+                </div>
+                
+                <!-- Библиотека элементов (админ) -->
+                <div id="elements-library" class="library-panel admin-only">
+                    <h3>Библиотека элементов</h3>
+                    <div class="library-items">
+                        <div class="library-item" data-type="fan">Вентилятор</div>
+                        <div class="library-item" data-type="damper">Заслонка</div>
+                        <div class="library-item" data-type="heater">Нагреватель</div>
+                        <div class="library-item" data-type="filter">Фильтр</div>
+                        <div class="library-item" data-type="sensor">Датчик</div>
+                        <div class="library-item" data-type="button-start">Кнопка ПУСК</div>
+                        <div class="library-item" data-type="button-stop">Кнопка СТОП</div>
+                        <div class="library-item" data-type="mode-switch">Режим ДИСТ/МЕСТ</div>
+                        <div class="library-item" data-type="season-switch">Режим ЗИМА/ЛЕТО</div>
+                        <div class="library-item" data-type="setpoint">Уставка</div>
+                    </div>
+                </div>
+                
+                <!-- Панель свойств элемента -->
+                <div id="element-properties" class="properties-panel">
+                    <h3>Свойства элемента</h3>
+                    <div id="properties-content">
+                        <label>Название: <input type="text" id="prop-name"></label>
+                        <label>Переменная: 
+                            <select id="prop-variable">
+                                <option value="">-- Выберите --</option>
+                            </select>
+                        </label>
+                        <label>Поворот: 
+                            <select id="prop-rotation">
+                                <option value="0">0°</option>
+                                <option value="45">45°</option>
+                                <option value="90">90°</option>
+                                <option value="135">135°</option>
+                                <option value="180">180°</option>
+                                <option value="225">225°</option>
+                                <option value="270">270°</option>
+                                <option value="315">315°</option>
+                            </select>
+                        </label>
+                        <button id="delete-element" class="admin-only danger">Удалить</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Панель настроек -->
+            <div id="settings-panel" class="module-panel admin-only">
+                <div class="panel-header">
+                    <h2>Настройки</h2>
+                </div>
+                <div class="settings-content">
+                    <div class="setting-group">
+                        <h3>Безопасность</h3>
+                        <label>Путь к файлу паролей: <input type="text" id="secret-file-path" value="/etc/nordic/scada/secret.json"></label>
+                        <label>Новый пароль администратора: <input type="password" id="new-admin-password"></label>
+                        <button id="change-password-btn">Изменить пароль</button>
+                    </div>
+                    <div class="setting-group">
+                        <h3>Модули</h3>
+                        <div id="modules-config">
+                            <!-- Конфигурация модулей -->
+                        </div>
+                        <button id="add-module-btn">+ Добавить модуль</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Панель аварий -->
+            <div id="alarms-panel" class="module-panel">
+                <div class="panel-header">
+                    <h2>Аварии</h2>
+                    <label><input type="checkbox" id="show-only-active"> Только актуальные</label>
+                    <select id="alarm-device-filter">
+                        <option value="">Все устройства</option>
+                    </select>
+                </div>
+                <div id="alarms-list" class="alarms-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Устройство</th>
+                                <th>Описание</th>
+                                <th>Статус</th>
+                                <th>Рекомендации</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Список аварий -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- I/O Монитор -->
+            <div id="io-monitor-panel" class="module-panel admin-only">
+                <div class="panel-header">
+                    <h2>I/O Монитор</h2>
+                    <select id="io-device-filter">
+                        <option value="">Выберите устройство</option>
+                    </select>
+                </div>
+                <div id="io-variables-list" class="io-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Адрес</th>
+                                <th>Тип</th>
+                                <th>Значение</th>
+                                <th>Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Переменные устройства -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Панель графиков -->
+            <div id="graphs-panel" class="module-panel">
+                <div class="panel-header">
+                    <h2>Графики</h2>
+                    <button id="add-graph-btn">+ Добавить график</button>
+                </div>
+                <div id="graphs-container" class="graphs-wrapper">
+                    <!-- Контейнеры для графиков -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальное окно добавления устройства -->
+    <div id="add-device-modal" class="modal admin-only">
+        <div class="modal-content">
+            <h3>Добавить устройство</h3>
+            <label>Название: <input type="text" id="device-name"></label>
+            <label>Тип подключения: 
+                <select id="device-type">
+                    <option value="tcpip">TCP/IP</option>
+                    <option value="modbus">MODBUS RTU</option>
+                </select>
+            </label>
+            <label>IP/Порт: <input type="text" id="device-address" placeholder="192.168.1.100:502"></label>
+            <label>Карта переменных (CSV/MAP): <input type="file" id="device-map-file"></label>
+            <div class="modal-actions">
+                <button id="confirm-add-device">Добавить</button>
+                <button id="cancel-add-device">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

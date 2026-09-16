@@ -1,0 +1,16 @@
+VariableName,Address,Type,Description
+Fan1_Start,40001,output,Запуск вентилятора 1
+Fan1_Stop,40002,output,Остановка вентилятора 1
+Fan1_Status,30001,input,Статус вентилятора 1
+Fan1_Alarm,30002,input,Авария вентилятора 1
+Damper1_Position,40003,output,Позиция заслонки 1
+Damper1_Feedback,30003,input,Обратная связь заслонки 1
+Heater1_Enable,40004,output,Включение нагревателя 1
+Heater1_Temp,30004,input,Температура нагревателя 1
+Filter1_Alarm,30005,input,Загрязнение фильтра 1
+SupplyTemp,30006,input,Температура приточного воздуха
+ReturnTemp,30007,input,Температура обратного воздуха
+OutdoorTemp,30008,input,Температура наружного воздуха
+Mode_DistLocal,40005,output,Режим Дистанционный/Местный
+Mode_WinterSummer,40006,output,Режим Зима/Лето
+Setpoint_Temp,40007,output,Уставка температуры

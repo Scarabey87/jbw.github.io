@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nordic SCADA - Библиотека SVG элементов</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f8; /* Светлый фон в стиле Nordic */
+            color: #2c3e50;
+            padding: 20px;
+        }
+        h1 { text-align: center; color: #34495e; }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .card:hover { transform: translateY(-5px); }
+        .card h3 { margin-top: 15px; font-size: 1.1em; color: #7f8c8d; }
+        
+        /* Общие стили для SVG */
+        svg {
+            width: 150px;
+            height: 150px;
+            /* Переменные для управления состоянием из JS */
+            --primary-color: #bdc3c7; /* Цвет покоя */
+            --active-color: #3498db;  /* Цвет работы */
+            --alarm-color: #e74c3c;   /* Цвет аварии */
+            --status: var(--primary-color); /* Текущий статус */
+        }
+
+        /* --- АНИМАЦИИ --- */
+
+        /* 1. Вентилятор: Вращение */
+        @keyframes spin {
+            from { transform: rotate(0deg); transform-origin: center; }
+            to { transform: rotate(360deg); transform-origin: center; }
+        }
+        .fan-blades {
+            transition: fill 0.3s;
+            fill: var(--status);
+        }
+        .fan-running .fan-blades {
+            animation: spin 1s linear infinite;
+        }
+        .fan-alarm .fan-blades {
+            animation: spin 0.2s linear infinite; /* Быстрое дерганье при аварии */
+            fill: var(--alarm-color);
+        }
+
+        /* 2. Заслонка: Поворот створки */
+        @keyframes flap-open {
+            0% { transform: scaleY(0.1); }
+            100% { transform: scaleY(1); }
+        }
+        .damper-body { fill: var(--status); transition: fill 0.3s; }
+        .damper-flap { 
+            transform-origin: center; 
+            transition: transform 0.5s ease-in-out;
+        }
+        .damper-open .damper-flap {
+            transform: scaleY(0.1); /* Имитация открытия (вид сбоку) или поворот */
+        }
+        /* Для наглядности сделаем поворот прямоугольника */
+        .damper-flap-rect {
+            transform-origin: center;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .damper-open .damper-flap-rect {
+            transform: rotate(90deg); /* Открыта */
+            fill: var(--active-color);
+        }
+        .damper-closed .damper-flap-rect {
+            transform: rotate(0deg); /* Закрыта */
+            fill: var(--status);
+        }
+        .damper-alarm .damper-body { fill: var(--alarm-color); }
+
+        /* 3. Нагреватель: Пульсация тепла */
+        @keyframes heat-pulse {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+        .heater-element {
+            stroke: var(--status);
+            stroke-width: 3;
+            fill: none;
+            transition: stroke 0.3s;
+        }
+        .heater-on .heater-element {
+            stroke: var(--active-color); /* Или оранжевый #e67e22 */
+            animation: heat-pulse 1.5s ease-in-out infinite;
+        }
+        .heater-alarm .heater-element {
+            stroke: var(--alarm-color);
+            animation: heat-pulse 0.5s ease-in-out infinite;
+        }
+
+        /* 4. Фильтр: Загрязнение (изменение прозрачности/цвета) */
+        .filter-frame { fill: var(--status); transition: fill 0.3s; }
+        .filter-mesh { 
+            fill-opacity: 0.2; 
+            transition: fill-opacity 0.5s, fill 0.5s;
+        }
+        .filter-dirty .filter-mesh {
+            fill-opacity: 0.8;
+            fill: #7f8c8d; /* Серый цвет загрязнения */
+        }
+        .filter-alarm .filter-frame {
+            fill: var(--alarm-color);
+        }
+
+        /* 5. Датчик: Мигание индикатора */
+        .sensor-body { fill: var(--status); transition: fill 0.3s; }
+        .sensor-led {
+            fill: white;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+        .sensor-active .sensor-led {
+            animation: blink 1s steps(2, start) infinite;
+        }
+        @keyframes blink {
+            to { opacity: 1; }
+        }
+        .sensor-alarm .sensor-body { fill: var(--alarm-color); }
+
+        /* Контролы для демо */
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+        button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+        button:hover { background: #bdc3c7; }
+        button.active { background: #3498db; color: white; }
+        button.alarm { background: #e74c3c; color: white; }
+
+    </style>
+</head>
+<body>
+
+    <h1>Библиотека элементов Nordic SCADA</h1>
+    <p style="text-align: center; color: #7f8c8d;">Нажмите кнопки под элементами, чтобы проверить состояния (Норма / Работа / Авария)</p>
+
+    <div class="gallery">
+
+        <!-- 1. ВЕНТИЛЯТОР -->
+        <div class="card">
+            <svg id="svg-fan" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Корпус -->
+                <circle cx="50" cy="50" r="45" stroke="#bdc3c7" stroke-width="2" fill="none"/>
+                <!-- Лопасти (группа для вращения) -->
+                <g class="fan-blades-group">
+                    <path class="fan-blades" d="M50 50 L50 15 A35 35 0 0 1 85 50 Z" />
+                    <path class="fan-blades" d="M50 50 L85 50 A35 35 0 0 1 50 85 Z" />
+                    <path class="fan-blades" d="M50 50 L50 85 A35 35 0 0 1 15 50 Z" />
+                    <path class="fan-blades" d="M50 50 L15 50 A35 35 0 0 1 50 15 Z" />
+                </g>
+                <!-- Центр -->
+                <circle cx="50" cy="50" r="5" fill="#2c3e50"/>
+            </svg>
+            <h3>Вентилятор</h3>
+            <div class="controls">
+                <button onclick="setState('fan', 'normal')">Норма</button>
+                <button onclick="setState('fan', 'run')">Пуск</button>
+                <button onclick="setState('fan', 'alarm')" class="alarm">Авария</button>
+            </div>
+        </div>
+
+        <!-- 2. ЗАСЛОНКА -->
+        <div class="card">
+            <svg id="svg-damper" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Труба/Короб -->
+                <rect x="10" y="30" width="80" height="40" rx="5" fill="none" stroke="#bdc3c7" stroke-width="2"/>
+                <!-- Створка заслонки -->
+                <rect id="damper-flap" class="damper-flap-rect" x="45" y="25" width="10" height="50" rx="2" fill="#bdc3c7"/>
+                <!-- Привод (кружок сверху) -->
+                <circle cx="50" cy="20" r="6" fill="#95a5a6"/>
+                <line x1="50" y1="20" x2="50" y2="14" stroke="#2c3e50" stroke-width="2"/>
+            </svg>
+            <h3>Заслонка</h3>
+            <div class="controls">
+                <button onclick="setState('damper', 'closed')">Закрыта</button>
+                <button onclick="setState('damper', 'open')">Открыта</button>
+                <button onclick="setState('damper', 'alarm')" class="alarm">Авария</button>
+            </div>
+        </div>
+
+        <!-- 3. НАГРЕВАТЕЛЬ -->
+        <div class="card">
+            <svg id="svg-heater" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Корпус -->
+                <rect x="20" y="20" width="60" height="60" rx="4" fill="none" stroke="#bdc3c7" stroke-width="2"/>
+                <!-- Тэн зигзагом -->
+                <polyline class="heater-element" points="30,30 40,70 50,30 60,70 70,30"/>
+                <!-- Индикатор -->
+                <circle cx="50" cy="85" r="3" fill="#bdc3c7" class="heater-indicator"/>
+            </svg>
+            <h3>Нагреватель</h3>
+            <div class="controls">
+                <button onclick="setState('heater', 'normal')">Выкл</button>
+                <button onclick="setState('heater', 'run')">Вкл</button>
+                <button onclick="setState('heater', 'alarm')" class="alarm">Авария</button>
+            </div>
+        </div>
+
+        <!-- 4. ФИЛЬТР -->
+        <div class="card">
+            <svg id="svg-filter" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Рамка -->
+                <rect x="25" y="25" width="50" height="50" rx="2" class="filter-frame"/>
+                <!-- Сетка фильтра -->
+                <pattern id="mesh" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+                    <circle cx="2" cy="2" r="1" fill="#2c3e50"/>
+                </pattern>
+                <rect x="27" y="27" width="46" height="46" class="filter-mesh" fill="url(#mesh)"/>
+                <!-- Стрелки потока -->
+                <path d="M40 15 L40 22 M37 19 L40 22 L43 19" stroke="#bdc3c7" stroke-width="2" fill="none"/>
+                <path d="M60 85 L60 78 M57 81 L60 78 L63 81" stroke="#bdc3c7" stroke-width="2" fill="none"/>
+            </svg>
+            <h3>Фильтр</h3>
+            <div class="controls">
+                <button onclick="setState('filter', 'normal')">Чистый</button>
+                <button onclick="setState('filter', 'dirty')">Загрязнен</button>
+                <button onclick="setState('filter', 'alarm')" class="alarm">Авария</button>
+            </div>
+        </div>
+
+        <!-- 5. ДАТЧИК (Температуры/Давления) -->
+        <div class="card">
+            <svg id="svg-sensor" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Ножка датчика -->
+                <line x1="50" y1="80" x2="50" y2="60" stroke="#bdc3c7" stroke-width="3"/>
+                <!-- Головка датчика -->
+                <circle cx="50" cy="50" r="20" class="sensor-body"/>
+                <!-- Индикатор внутри -->
+                <circle cx="50" cy="50" r="6" class="sensor-led"/>
+                <!-- Значок (например, термометр) -->
+                <path d="M50 44 L50 56 M47 47 L50 44 L53 47" stroke="white" stroke-width="2" fill="none" style="pointer-events:none;"/>
+            </svg>
+            <h3>Датчик</h3>
+            <div class="controls">
+                <button onclick="setState('sensor', 'normal')">Норма</button>
+                <button onclick="setState('sensor', 'active')">Активен</button>
+                <button onclick="setState('sensor', 'alarm')" class="alarm">Авария</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Функция управления состояниями для демонстрации
+        function setState(type, state) {
+            const svg = document.getElementById(`svg-${type}`);
+            const buttons = svg.parentElement.querySelectorAll('button');
+            
+            // Сброс классов
+            svg.className = '';
+            buttons.forEach(b => b.classList.remove('active'));
+
+            // Логика переключения
+            if (type === 'fan') {
+                if (state === 'run') {
+                    svg.classList.add('fan-running');
+                    buttons[1].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--active-color)');
+                } else if (state === 'alarm') {
+                    svg.classList.add('fan-alarm');
+                    buttons[2].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--alarm-color)');
+                } else {
+                    buttons[0].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--primary-color)');
+                }
+            }
+
+            if (type === 'damper') {
+                if (state === 'open') {
+                    svg.classList.add('damper-open');
+                    svg.classList.remove('damper-closed');
+                    buttons[1].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--active-color)');
+                } else if (state === 'closed') {
+                    svg.classList.add('damper-closed');
+                    svg.classList.remove('damper-open');
+                    buttons[0].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--primary-color)');
+                } else if (state === 'alarm') {
+                    svg.classList.add('damper-alarm');
+                    buttons[2].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--alarm-color)');
+                }
+            }
+
+            if (type === 'heater') {
+                if (state === 'run') {
+                    svg.classList.add('heater-on');
+                    buttons[1].classList.add('active');
+                    svg.style.setProperty('--status', '#e67e22'); // Оранжевый для тепла
+                } else if (state === 'alarm') {
+                    svg.classList.add('heater-alarm');
+                    buttons[2].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--alarm-color)');
+                } else {
+                    svg.classList.remove('heater-on');
+                    buttons[0].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--primary-color)');
+                }
+            }
+
+            if (type === 'filter') {
+                if (state === 'dirty') {
+                    svg.classList.add('filter-dirty');
+                    buttons[1].classList.add('active');
+                    svg.style.setProperty('--status', '#f1c40f'); // Желтый предупреждение
+                } else if (state === 'alarm') {
+                    svg.classList.add('filter-alarm');
+                    buttons[2].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--alarm-color)');
+                } else {
+                    svg.classList.remove('filter-dirty');
+                    buttons[0].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--active-color)'); // Зеленый норма
+                }
+            }
+
+            if (type === 'sensor') {
+                if (state === 'active') {
+                    svg.classList.add('sensor-active');
+                    buttons[1].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--active-color)');
+                } else if (state === 'alarm') {
+                    svg.classList.add('sensor-alarm');
+                    svg.classList.remove('sensor-active');
+                    buttons[2].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--alarm-color)');
+                } else {
+                    svg.classList.remove('sensor-active');
+                    buttons[0].classList.add('active');
+                    svg.style.setProperty('--status', 'var(--primary-color)');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
