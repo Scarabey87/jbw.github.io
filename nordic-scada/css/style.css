@@ -1,0 +1,605 @@
+/* Nordic SCADA Styles */
+:root {
+    --bg-primary: #f5f7fa;
+    --bg-secondary: #ffffff;
+    --text-primary: #2c3e50;
+    --text-secondary: #7f8c8d;
+    --accent-color: #3498db;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --border-color: #ecf0f1;
+    --shadow: 0 2px 10px rgba(0,0,0,0.05);
+    --grid-color: #e0e0e0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    overflow: hidden;
+}
+
+.screen {
+    display: none;
+    height: 100vh;
+    width: 100vw;
+}
+
+.screen.active {
+    display: flex;
+}
+
+/* Login Screen */
+#login-screen {
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-container {
+    background: var(--bg-secondary);
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    text-align: center;
+    min-width: 300px;
+}
+
+.login-container h1 {
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.login-container select,
+.login-container input,
+.login-container button {
+    width: 100%;
+    padding: 0.8rem;
+    margin: 0.5rem 0;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+.login-container button {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.login-container button:hover {
+    background: #2980b9;
+}
+
+.error {
+    color: var(--danger-color);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+/* Main Interface */
+#main-interface {
+    display: none;
+}
+
+#main-interface.active {
+    display: flex;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 250px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.menu-section {
+    margin-bottom: 2rem;
+}
+
+.menu-section h3 {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+#main-menu li {
+    list-style: none;
+    padding: 0.8rem;
+    margin: 0.3rem 0;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#main-menu li:hover {
+    background: var(--bg-primary);
+}
+
+#main-menu li.active {
+    background: var(--accent-color);
+    color: white;
+}
+
+.user-info {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.user-info span {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+#logout-btn {
+    width: 100%;
+    padding: 0.5rem;
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* Workspace */
+.workspace {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.module-panel {
+    display: none;
+    height: 100%;
+    overflow: auto;
+    padding: 1.5rem;
+}
+
+.module-panel.active {
+    display: block;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.panel-header h2 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+
+.schema-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.schema-controls button {
+    padding: 0.5rem 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.schema-controls button:hover {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+/* Devices Grid */
+.devices-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.device-card {
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-left: 5px solid var(--success-color);
+}
+
+.device-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.device-card.stop {
+    border-left-color: var(--text-secondary);
+}
+
+.device-card.alarm {
+    border-left-color: var(--danger-color);
+    animation: pulse-alarm 1s infinite;
+}
+
+@keyframes pulse-alarm {
+    0%, 100% { box-shadow: var(--shadow); }
+    50% { box-shadow: 0 0 20px rgba(231, 76, 60, 0.4); }
+}
+
+.device-card h3 {
+    margin-bottom: 0.5rem;
+}
+
+.device-card .status {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: white;
+    background: var(--success-color);
+}
+
+.device-card.stop .status {
+    background: var(--text-secondary);
+}
+
+.device-card.alarm .status {
+    background: var(--danger-color);
+}
+
+.device-card .variables {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* Schema Canvas */
+.canvas-container {
+    width: 100%;
+    height: calc(100vh - 150px);
+    overflow: auto;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    position: relative;
+}
+
+.schema-canvas {
+    width: 3000px;
+    height: 3000px;
+    position: relative;
+    background-image: 
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: 20px 20px;
+    transform-origin: 0 0;
+}
+
+.schema-canvas.grid-hidden {
+    background-image: none;
+}
+
+.schema-element {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+    transition: box-shadow 0.2s;
+}
+
+.schema-element:hover {
+    box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+}
+
+.schema-element.selected {
+    box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+/* Library Panel */
+.library-panel {
+    position: absolute;
+    top: 80px;
+    right: 20px;
+    width: 200px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    display: none;
+    z-index: 100;
+}
+
+.library-panel.visible {
+    display: block;
+}
+
+.library-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.library-item {
+    padding: 0.8rem;
+    background: var(--bg-primary);
+    border-radius: 5px;
+    cursor: grab;
+    text-align: center;
+    transition: background 0.2s;
+}
+
+.library-item:hover {
+    background: var(--accent-color);
+    color: white;
+}
+
+/* Properties Panel */
+.properties-panel {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 250px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    display: none;
+}
+
+.properties-panel.visible {
+    display: block;
+}
+
+.properties-panel label {
+    display: block;
+    margin: 0.8rem 0;
+    font-size: 0.9rem;
+}
+
+.properties-panel input,
+.properties-panel select {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: 0.3rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+}
+
+.danger {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+/* Settings */
+.settings-content {
+    max-width: 600px;
+}
+
+.setting-group {
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
+}
+
+.setting-group h3 {
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+}
+
+.setting-group label {
+    display: block;
+    margin: 0.8rem 0;
+}
+
+.setting-group input {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: 0.3rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+}
+
+.setting-group button {
+    margin-top: 1rem;
+    padding: 0.8rem 1.5rem;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* Alarms Table */
+.alarms-table table,
+.io-table table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.alarms-table th,
+.alarms-table td,
+.io-table th,
+.io-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.alarms-table th,
+.io-table th {
+    background: var(--bg-primary);
+    font-weight: bold;
+    color: var(--text-secondary);
+}
+
+.alarms-table tr:hover,
+.io-table tr:hover {
+    background: var(--bg-primary);
+}
+
+.alarm-active {
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+.alarm-resolved {
+    color: var(--success-color);
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--bg-secondary);
+    padding: 2rem;
+    border-radius: 10px;
+    min-width: 400px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal-content h3 {
+    margin-bottom: 1.5rem;
+}
+
+.modal-content label {
+    display: block;
+    margin: 1rem 0;
+}
+
+.modal-content input,
+.modal-content select {
+    width: 100%;
+    padding: 0.8rem;
+    margin-top: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.modal-actions button {
+    flex: 1;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.modal-actions button:first-child {
+    background: var(--accent-color);
+    color: white;
+}
+
+.modal-actions button:last-child {
+    background: var(--text-secondary);
+    color: white;
+}
+
+/* Admin Only Elements */
+.admin-only {
+    display: none !important;
+}
+
+body.role-admin .admin-only {
+    display: block !important;
+}
+
+body.role-admin .admin-only.inline {
+    display: inline-block !important;
+}
+
+/* Graphs */
+.graphs-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    gap: 1.5rem;
+}
+
+.graph-container {
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    height: 300px;
+}
+
+.graph-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.graph-canvas {
+    width: 100%;
+    height: calc(100% - 50px);
+    background: var(--bg-primary);
+    border-radius: 5px;
+}
+
+/* Utility Classes */
+.hidden {
+    display: none !important;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
