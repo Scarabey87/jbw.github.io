@@ -355,14 +355,14 @@ class NordicSCADA {
         return svgs[type] || '<div style="width:50px;height:50px;background:#ccc;">?</div>';
     }
 
-    selectElement(element, el DOMElement) {
+    selectElement(element, domElement) {
         // Remove previous selection
         document.querySelectorAll('.schema-element.selected').forEach(el => {
             el.classList.remove('selected');
         });
 
         this.selectedElement = element;
-        el DOMElement.classList.add('selected');
+        domElement.classList.add('selected');
 
         // Show properties panel
         const propertiesPanel = document.getElementById('element-properties');

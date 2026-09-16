@@ -565,6 +565,11 @@ body.role-admin .admin-only.inline {
     display: inline-block !important;
 }
 
+body.role-admin li.admin-only,
+body.role-admin .module-panel.admin-only {
+    display: block !important;
+}
+
 /* Graphs */
 .graphs-wrapper {
     display: grid;
