@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Nordic SCADA System</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --panel-bg: #ffffff;
+            --text-main: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --accent: #3498db;
+            --accent-hover: #2980b9;
+            --danger: #e74c3c;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --border: #dfe6e9;
+            --grid-line: #ecf0f1;
+            --grid-major: #bdc3c7;
+            
+            /* Статусы элементов */
+            --status-stop: #bdc3c7;
+            --status-run: #27ae60;
+            --status-alarm: #e74c3c;
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); color: var(--text-main); overflow: hidden; height: 100vh; display: flex; }
+
+        /* Login Modal */
+        #login-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(44, 62, 80, 0.9); z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .login-box {
+            background: var(--panel-bg); padding: 40px; border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; width: 300px;
+        }
+        .login-box input {
+            width: 100%; padding: 10px; margin: 10px 0; border: 1px solid var(--border);
+            border-radius: 4px; font-size: 16px;
+        }
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;
+            font-weight: 600; transition: 0.2s; background: var(--accent); color: white;
+        }
+        .btn:hover { background: var(--accent-hover); }
+        .btn-danger { background: var(--danger); }
+        .btn-success { background: var(--success); }
+
+        /* Sidebar */
+        #sidebar {
+            width: 250px; background: var(--panel-bg); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; z-index: 100;
+        }
+        .logo { padding: 20px; font-size: 20px; font-weight: bold; border-bottom: 1px solid var(--border); }
+        .menu { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+        .menu-item {
+            padding: 15px 20px; cursor: pointer; border-left: 4px solid transparent;
+            color: var(--text-secondary); transition: 0.2s;
+        }
+        .menu-item:hover { background: #f8f9fa; color: var(--text-main); }
+        .menu-item.active { border-left-color: var(--accent); background: #ebf5fb; color: var(--accent); font-weight: 600; }
+        .user-info { padding: 20px; border-top: 1px solid var(--border); font-size: 14px; }
+
+        /* Main Content */
+        #main-area { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+        
+        /* Top Bar for specific views */
+        .top-bar {
+            height: 50px; background: var(--panel-bg); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 20px; justify-content: space-between;
+        }
+
+        /* Views */
+        .view-section { display: none; height: 100%; width: 100%; position: absolute; top: 0; left: 0; }
+        .view-section.active { display: block; }
+
+        /* Devices View */
+        #devices-canvas {
+            width: 100%; height: calc(100% - 50px); position: relative;
+            background-image: radial-gradient(var(--grid-line) 1px, transparent 1px);
+            background-size: 20px 20px; overflow: auto; cursor: grab;
+        }
+        .device-card {
+            position: absolute; width: 200px; background: var(--panel-bg);
+            border: 1px solid var(--border); border-radius: 6px; padding: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .device-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .device-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold; }
+        .status-indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .status-stop { background: var(--status-stop); }
+        .status-run { background: var(--status-run); }
+        .status-alarm { background: var(--status-alarm); animation: pulse 1s infinite; }
+
+        /* Mimic Schema Editor */
+        #mimic-editor {
+            width: 100%; height: 100%; position: relative; overflow: hidden;
+            background-color: #fafafa;
+        }
+        #schema-canvas {
+            position: absolute; top: 0; left: 0; transform-origin: 0 0;
+            width: 5000px; height: 5000px; /* Large canvas */
+        }
+        .grid-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+            background-image: 
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .grid-overlay.major {
+            background-image: 
+                linear-gradient(var(--grid-major) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
+            background-size: 100px 100px;
+        }
+
+        /* Library Panel */
+        #library-panel {
+            position: absolute; right: 0; top: 50px; bottom: 0; width: 250px;
+            background: var(--panel-bg); border-left: 1px solid var(--border);
+            transform: translateX(100%); transition: transform 0.3s; z-index: 50;
+            padding: 10px; overflow-y: auto;
+        }
+        #library-panel.open { transform: translateX(0); }
+        .lib-item {
+            padding: 10px; border: 1px solid var(--border); margin-bottom: 10px;
+            border-radius: 4px; cursor: grab; display: flex; align-items: center; gap: 10px;
+            background: #fff;
+        }
+        .lib-item svg { width: 32px; height: 32px; }
+
+        /* Placed Elements on Schema */
+        .schema-element {
+            position: absolute; width: 60px; height: 60px; cursor: grab;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .schema-element.selected { outline: 2px dashed var(--accent); }
+        .schema-element svg { width: 100%; height: 100%; pointer-events: none; }
+        
+        /* Properties Panel */
+        #properties-panel {
+            position: absolute; left: 20px; top: 70px; width: 280px;
+            background: var(--panel-bg); padding: 15px; border-radius: 6px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1); display: none; z-index: 60;
+        }
+        .prop-row { margin-bottom: 10px; }
+        .prop-row label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+        .prop-row input, .prop-row select { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; }
+
+        /* Control Block on Schema */
+        .control-block {
+            position: absolute; background: rgba(255,255,255,0.9); border: 1px solid var(--border);
+            padding: 10px; border-radius: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .ctrl-btn {
+            padding: 5px; font-size: 12px; border: 1px solid var(--border); background: #fff;
+            cursor: pointer; border-radius: 3px;
+        }
+        .ctrl-btn.active { background: var(--success); color: white; border-color: var(--success); }
+        .ctrl-btn.stop-active { background: var(--danger); color: white; border-color: var(--danger); }
+
+        /* Charts View */
+        #charts-container { padding: 20px; height: 100%; overflow-y: auto; }
+        .chart-card { background: var(--panel-bg); padding: 20px; margin-bottom: 20px; border-radius: 6px; border: 1px solid var(--border); }
+        .chart-placeholder { height: 300px; background: #f8f9fa; border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+
+        /* Alarms View */
+        #alarms-list { padding: 20px; }
+        .alarm-table { width: 100%; border-collapse: collapse; background: var(--panel-bg); }
+        .alarm-table th, .alarm-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .alarm-row.alarm-active { background: #fdedec; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* Helper Classes */
+        .hidden { display: none !important; }
+        .flex-row { display: flex; gap: 10px; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <!-- Login -->
+    <div id="login-modal">
+        <div class="login-box">
+            <h2 style="margin-top:0;">Nordic SCADA</h2>
+            <p style="color:var(--text-secondary)">Вход в систему</p>
+            <input type="text" id="username" placeholder="Логин (admin/operator)" value="admin">
+            <input type="password" id="password" placeholder="Пароль">
+            <button class="btn" style="width:100%" onclick="app.login()">Войти</button>
+            <p id="login-error" style="color:var(--danger); display:none; margin-top:10px;">Неверный логин или пароль</p>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div class="logo">NORDIC SCADA</div>
+        <ul class="menu" id="main-menu">
+            <li class="menu-item active" data-view="devices">Устройства</li>
+            <li class="menu-item hidden-admin-only" data-view="settings">Настройки</li>
+            <li class="menu-item" data-view="alarms">Аварии</li>
+            <li class="menu-item hidden-admin-only" data-view="io-monitor">I/O Монитор</li>
+            <li class="menu-item" data-view="charts">Графики</li>
+        </ul>
+        <div class="user-info">
+            Пользователь: <span id="current-user" style="font-weight:bold">-</span><br>
+            <small style="cursor:pointer; color:var(--accent)" onclick="app.logout()">Выход</small>
+        </div>
+    </div>
+
+    <!-- Main Area -->
+    <div id="main-area">
+        
+        <!-- Devices View -->
+        <div id="view-devices" class="view-section active">
+            <div class="top-bar">
+                <h3>Устройства</h3>
+                <div class="flex-row">
+                    <button class="btn btn-success" onclick="app.addDevicePrompt()">+ Добавить устройство</button>
+                </div>
+            </div>
+            <div id="devices-canvas" onmousedown="app.handleCanvasMouseDown(event, 'devices')">
+                <!-- Device cards will be injected here -->
+            </div>
+        </div>
+
+        <!-- Mimic Schema View (Dynamic) -->
+        <div id="view-mimic" class="view-section">
+            <div class="top-bar">
+                <div class="flex-row">
+                    <button class="btn" onclick="app.closeMimic()">← Назад</button>
+                    <h3 id="mimic-title">Мнемосхема: Устройство 1</h3>
+                </div>
+                <div class="flex-row">
+                    <button class="btn" id="btn-library" onclick="app.toggleLibrary()" style="display:none">📚 Библиотека</button>
+                    <button class="btn" onclick="app.saveSchema()">💾 Сохранить JSON</button>
+                    <button class="btn" onclick="app.loadSchema()">📂 Загрузить</button>
+                    <select id="zoom-select" onchange="app.setZoom(this.value)">
+                        <option value="0.5">50%</option>
+                        <option value="0.75">75%</option>
+                        <option value="1" selected>100%</option>
+                        <option value="1.5">150%</option>
+                        <option value="2">200%</option>
+                    </select>
+                </div>
+            </div>
+            <div id="mimic-editor">
+                <div class="grid-overlay major" id="grid-bg"></div>
+                <div id="schema-canvas" onmousedown="app.handleCanvasMouseDown(event, 'schema')">
+                    <!-- Elements injected here -->
+                    
+                    <!-- Control Block Example (Hidden by default, shown on device click) -->
+                    <div id="device-controls" class="control-block hidden">
+                        <button class="ctrl-btn" onclick="app.controlAction('START')">ПУСК</button>
+                        <button class="ctrl-btn stop-active" onclick="app.controlAction('STOP')">СТОП</button>
+                        <button class="ctrl-btn" onclick="app.controlAction('MODE_DIST')">ДИСТ</button>
+                        <button class="ctrl-btn" onclick="app.controlAction('MODE_LOCAL')">МЕСТ</button>
+                        <button class="ctrl-btn" onclick="app.controlAction('SEASON_WINTER')">ЗИМА</button>
+                        <button class="ctrl-btn" onclick="app.controlAction('SEASON_SUMMER')">ЛЕТО</button>
+                        <div style="grid-column: span 2; margin-top:5px;">
+                            <label style="font-size:10px">Уставка:</label>
+                            <input type="number" style="width:100%; padding:4px;" value="24.0">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Library Panel -->
+                <div id="library-panel">
+                    <h4>Библиотека элементов</h4>
+                    <div class="lib-item" draggable="true" ondragstart="app.dragStart(event, 'fan')">
+                        <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/><path d="M50 50 L50 10 A40 40 0 0 1 90 50 Z" fill="#3498db" class="blade"/><circle cx="50" cy="50" r="5" fill="#7f8c8d"/></svg>
+                        Вентилятор
+                    </div>
+                    <div class="lib-item" draggable="true" ondragstart="app.dragStart(event, 'damper')">
+                        <svg viewBox="0 0 100 100"><rect x="10" y="30" width="80" height="40" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/><rect x="30" y="30" width="40" height="40" fill="#f39c12" transform="rotate(45 50 50)" class="flap"/></svg>
+                        Заслонка
+                    </div>
+                    <div class="lib-item" draggable="true" ondragstart="app.dragStart(event, 'heater')">
+                        <svg viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/><path d="M30 50 Q40 30 50 50 T70 50" fill="none" stroke="#e74c3c" stroke-width="3" class="coil"/></svg>
+                        Нагреватель
+                    </div>
+                    <div class="lib-item" draggable="true" ondragstart="app.dragStart(event, 'filter')">
+                        <svg viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="#95a5a6" stroke-width="1"/></pattern><rect x="20" y="20" width="60" height="60" fill="url(#grid)"/></svg>
+                        Фильтр
+                    </div>
+                </div>
+
+                <!-- Properties Panel -->
+                <div id="properties-panel">
+                    <h4>Свойства элемента</h4>
+                    <div class="prop-row">
+                        <label>Название</label>
+                        <input type="text" id="prop-name">
+                    </div>
+                    <div class="prop-row">
+                        <label>Переменная (Tag)</label>
+                        <select id="prop-tag">
+                            <option value="">-- Нет --</option>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="prop-row">
+                        <label>Поворот (град)</label>
+                        <select id="prop-rotation" onchange="app.updateElementRotation(this.value)">
+                            <option value="0">0°</option>
+                            <option value="45">45°</option>
+                            <option value="90">90°</option>
+                            <option value="135">135°</option>
+                            <option value="180">180°</option>
+                            <option value="225">225°</option>
+                            <option value="270">270°</option>
+                            <option value="315">315°</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-danger" style="width:100%; margin-top:10px;" onclick="app.deleteSelectedElement()">Удалить элемент</button>
+                    <button class="btn" style="width:100%; margin-top:5px;" onclick="document.getElementById('properties-panel').style.display='none'">Закрыть</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="view-settings" class="view-section">
+            <div class="top-bar"><h3>Настройки системы</h3></div>
+            <div style="padding:20px; max-width:600px;">
+                <div class="prop-row">
+                    <label>Путь к файлу секретов</label>
+                    <input type="text" value="./secrets.json" readonly>
+                </div>
+                <div class="prop-row">
+                    <label>Новый пароль администратора</label>
+                    <input type="password" id="new-admin-pass">
+                </div>
+                <button class="btn" onclick="alert('Пароль изменен (имитация)')">Сохранить пароль</button>
+                
+                <hr style="margin:20px 0; border:0; border-top:1px solid var(--border)">
+                
+                <h4>Модули</h4>
+                <div class="prop-row">
+                    <label><input type="checkbox" checked> Модуль "Графики" (Виден оператору)</label>
+                </div>
+                <div class="prop-row">
+                    <label><input type="checkbox"> Модуль "Отчетность" (Только админ)</label>
+                </div>
+                <button class="btn" onclick="alert('Модуль добавлен (имитация)')">Добавить модуль</button>
+            </div>
+        </div>
+
+        <!-- Alarms View -->
+        <div id="view-alarms" class="view-section">
+            <div class="top-bar">
+                <h3>Журнал аварий</h3>
+                <label><input type="checkbox" checked> Только актуальные</label>
+            </div>
+            <div id="alarms-list">
+                <table class="alarm-table">
+                    <thead>
+                        <tr>
+                            <th>Дата/Время</th>
+                            <th>Устройство</th>
+                            <th>Описание</th>
+                            <th>Статус</th>
+                            <th>Рекомендация</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="alarm-row alarm-active">
+                            <td>2023-10-27 10:15:00</td>
+                            <td>Приточная установка №1</td>
+                            <td>Авария двигателя вентилятора</td>
+                            <td style="color:var(--danger)">Актуальна</td>
+                            <td>Проверить автомат защиты двигателя</td>
+                        </tr>
+                        <tr class="alarm-row">
+                            <td>2023-10-26 14:20:00</td>
+                            <td>Вытяжная установка №2</td>
+                            <td>Загрязнение фильтра</td>
+                            <td style="color:var(--text-secondary)">Сброс</td>
+                            <td>Заменить фильтрующий элемент</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- I/O Monitor View -->
+        <div id="view-io-monitor" class="view-section">
+            <div class="top-bar"><h3>I/O Монитор (Администратор)</h3></div>
+            <div style="padding:20px;">
+                <p style="color:var(--text-secondary)">Прямое управление переменными устройства.</p>
+                <div style="background:white; padding:15px; border:1px solid var(--border); border-radius:4px; margin-bottom:10px;">
+                    <strong>AI_01_Temp_Supply</strong> <br>
+                    Value: <input type="number" value="22.5" style="width:80px"> 
+                    <button class="btn" style="padding:2px 10px; font-size:12px;">Записать</button>
+                    <span style="color:var(--success); font-size:12px; margin-left:10px;">RW</span>
+                </div>
+                <div style="background:white; padding:15px; border:1px solid var(--border); border-radius:4px;">
+                    <strong>DI_01_Fan_Status</strong> <br>
+                    Value: <span style="color:var(--success)">1 (Running)</span>
+                    <span style="color:var(--text-secondary); font-size:12px; margin-left:10px;">RO</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts View -->
+        <div id="view-charts" class="view-section">
+            <div class="top-bar">
+                <h3>Графики параметров</h3>
+                <button class="btn" onclick="alert('Выберите переменную для добавления на график')">+ Добавить тренд</button>
+            </div>
+            <div id="charts-container">
+                <div class="chart-card">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <strong>Температура притока (AI_01)</strong>
+                        <span style="color:#3498db">● 24.5 °C</span>
+                    </div>
+                    <div class="chart-placeholder">
+                        [Здесь будет Canvas график Chart.js или аналог]
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+<script>
+/**
+ * Nordic SCADA Logic
+ */
+const app = {
+    currentUser: null,
+    isAdmin: false,
+    devices: [], // Array of device objects
+    currentDeviceId: null,
+    schemaElements: [], // Elements on current mimic
+    selectedElementId: null,
+    zoom: 1,
+    panX: 0,
+    panY: 0,
+    isDragging: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    
+    // Mock Data for Variables Map
+    variableMap: [
+        { id: 'V01_STATUS', name: 'Статус вентилятора', type: 'BOOL' },
+        { id: 'V01_TEMP', name: 'Температура притока', type: 'FLOAT' },
+        { id: 'V01_SETPOINT', name: 'Уставка температуры', type: 'FLOAT' },
+        { id: 'V01_ALARM', name: 'Авария вентилятора', type: 'BOOL' }
+    ],
+
+    init: function() {
+        // Check local storage for session if needed, for now just show login
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.login();
+        });
+    },
+
+    login: function() {
+        const user = document.getElementById('username').value.toLowerCase();
+        const pass = document.getElementById('password').value;
+        const errorMsg = document.getElementById('login-error');
+
+        if (user === 'admin' && pass === '333') {
+            this.currentUser = 'admin';
+            this.isAdmin = true;
+            this.enterSystem();
+        } else if (user === 'operator' && pass === '123') { // Default operator pass
+            this.currentUser = 'operator';
+            this.isAdmin = false;
+            this.enterSystem();
+        } else {
+            errorMsg.style.display = 'block';
+        }
+    },
+
+    enterSystem: function() {
+        document.getElementById('login-modal').style.display = 'none';
+        document.getElementById('current-user').textContent = this.currentUser.toUpperCase();
+        
+        // Adjust UI based on role
+        const adminOnlyElements = document.querySelectorAll('.hidden-admin-only');
+        adminOnlyElements.forEach(el => {
+            if (this.isAdmin) el.classList.remove('hidden');
+            else el.classList.add('hidden');
+        });
+
+        // Show library button only for admin
+        document.getElementById('btn-library').style.display = this.isAdmin ? 'inline-block' : 'none';
+
+        // Initialize mock devices if empty
+        if (this.devices.length === 0) {
+            this.devices.push({
+                id: 1,
+                name: 'Приточная установка №1',
+                ip: '192.168.1.10',
+                protocol: 'MODBUS TCP',
+                status: 'run', // stop, run, alarm
+                variables: this.variableMap
+            });
+            this.renderDevices();
+        }
+    },
+
+    logout: function() {
+        location.reload();
+    },
+
+    navigate: function(viewName) {
+        // Hide all views
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+        
+        // Handle special case for Mimic (it's dynamic)
+        if (viewName === 'mimic') {
+            document.getElementById('view-mimic').classList.add('active');
+        } else {
+            document.getElementById(`view-${viewName}`).classList.add('active');
+            // Highlight menu
+            const menuItem = document.querySelector(`.menu-item[data-view="${viewName}"]`);
+            if (menuItem) menuItem.classList.add('active');
+        }
+    },
+
+    // --- Devices Logic ---
+
+    renderDevices: function() {
+        const canvas = document.getElementById('devices-canvas');
+        canvas.innerHTML = '';
+        this.devices.forEach(dev => {
+            const card = document.createElement('div');
+            card.className = 'device-card';
+            card.style.left = (50 + (dev.id * 220)) % (canvas.clientWidth - 220) + 'px';
+            card.style.top = (50 + Math.floor(dev.id / 3) * 150) + 'px';
+            card.ondblclick = () => this.openMimic(dev.id);
+            
+            let statusClass = 'status-stop';
+            if (dev.status === 'run') statusClass = 'status-run';
+            if (dev.status === 'alarm') statusClass = 'status-alarm';
+
+            card.innerHTML = `
+                <div class="device-header">
+                    <span>${dev.name}</span>
+                    <span class="status-indicator ${statusClass}"></span>
+                </div>
+                <div style="font-size:12px; color:var(--text-secondary)">IP: ${dev.ip}</div>
+                <div style="font-size:12px; color:var(--text-secondary)">Протокол: ${dev.protocol}</div>
+                <div style="margin-top:5px; font-size:11px; color:var(--accent)">Перем. : ${dev.variables.length}</div>
+            `;
+            canvas.appendChild(card);
+        });
+    },
+
+    addDevicePrompt: function() {
+        const name = prompt("Название устройства:", "Новая установка");
+        if (!name) return;
+        const ip = prompt("IP Адрес или Порт COM:", "192.168.0.1");
+        
+        // Simulate CSV Upload
+        const uploadCsv = confirm("Загрузить карту переменных (CSV/MAP)?\n(OK - загрузить стандартную, Cancel - пустая)");
+        
+        const newDev = {
+            id: Date.now(),
+            name: name,
+            ip: ip,
+            protocol: 'MODBUS TCP',
+            status: 'stop',
+            variables: uploadCsv ? this.variableMap : []
+        };
+        
+        this.devices.push(newDev);
+        this.renderDevices();
+    },
+
+    // --- Mimic Schema Logic ---
+
+    openMimic: function(deviceId) {
+        this.currentDeviceId = deviceId;
+        const dev = this.devices.find(d => d.id === deviceId);
+        document.getElementById('mimic-title').textContent = `Мнемосхема: ${dev.name}`;
+        this.navigate('mimic');
+        
+        // Reset view
+        this.schemaElements = []; // In real app, load from JSON here
+        this.renderSchemaElements();
+        document.getElementById('device-controls').classList.add('hidden');
+    },
+
+    closeMimic: function() {
+        this.navigate('devices');
+        this.currentDeviceId = null;
+    },
+
+    toggleLibrary: function() {
+        document.getElementById('library-panel').classList.toggle('open');
+    },
+
+    dragStart: function(ev, type) {
+        ev.dataTransfer.setData("elementType", type);
+    },
+
+    handleCanvasMouseDown: function(e, context) {
+        if (context === 'schema') {
+            // Pan logic or Deselect
+            if (e.target.id === 'schema-canvas' || e.target.classList.contains('grid-overlay')) {
+                this.selectedElementId = null;
+                document.getElementById('properties-panel').style.display = 'none';
+                document.getElementById('device-controls').classList.add('hidden');
+                
+                // Simple Pan implementation could go here
+                this.isDragging = true;
+                this.dragStartX = e.clientX;
+                this.dragStartY = e.clientY;
+            }
+        }
+    },
+
+    // Drop handler for library items
+    // Note: Need to attach drop event to schema-canvas in HTML or JS
+    setupDropZone: function() {
+        const canvas = document.getElementById('schema-canvas');
+        canvas.ondrop = (e) => {
+            e.preventDefault();
+            const type = e.dataTransfer.getData("elementType");
+            if (type) {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / this.zoom;
+                const y = (e.clientY - rect.top) / this.zoom;
+                this.addElement(type, x, y);
+            }
+        };
+        canvas.ondragover = (e) => e.preventDefault();
+        
+        // Mouse move for panning (simplified)
+        window.addEventListener('mousemove', (e) => {
+            if (this.isDragging && this.currentDeviceId) {
+                // Implement pan logic here if needed
+                this.isDragging = false; // Disable for now to keep it simple
+            }
+        });
+        window.addEventListener('mouseup', () => this.isDragging = false);
+        
+        // Wheel zoom
+        canvas.onwheel = (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            let newZoom = this.zoom * delta;
+            newZoom = Math.min(Math.max(.2, newZoom), 5);
+            this.setZoom(newZoom);
+        };
+    },
+
+    addElement: function(type, x, y) {
+        const id = 'el_' + Date.now();
+        const element = {
+            id: id,
+            type: type,
+            x: x,
+            y: y,
+            rotation: 0,
+            name: type.toUpperCase(),
+            tag: ''
+        };
+        this.schemaElements.push(element);
+        this.renderSchemaElements();
+    },
+
+    renderSchemaElements: function() {
+        // Clear existing elements (except controls)
+        const canvas = document.getElementById('schema-canvas');
+        const controls = document.getElementById('device-controls');
+        canvas.innerHTML = '';
+        canvas.appendChild(controls);
+
+        this.schemaElements.forEach(el => {
+            const div = document.createElement('div');
+            div.className = 'schema-element';
+            div.id = el.id;
+            div.style.left = el.x + 'px';
+            div.style.top = el.y + 'px';
+            div.style.transform = `rotate(${el.rotation}deg)`;
+            
+            // Get SVG content based on type (Simplified for demo)
+            let svgContent = '';
+            if (el.type === 'fan') svgContent = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/><path d="M50 50 L50 10 A40 40 0 0 1 90 50 Z" fill="#3498db" class="blade"/><circle cx="50" cy="50" r="5" fill="#7f8c8d"/></svg>';
+            if (el.type === 'damper') svgContent = '<svg viewBox="0 0 100 100"><rect x="10" y="30" width="80" height="40" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/><rect x="30" y="30" width="40" height="40" fill="#f39c12" transform="rotate(45 50 50)" class="flap"/></svg>';
+            if (el.type === 'heater') svgContent = '<svg viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/><path d="M30 50 Q40 30 50 50 T70 50" fill="none" stroke="#e74c3c" stroke-width="3" class="coil"/></svg>';
+            if (el.type === 'filter') svgContent = '<svg viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="#95a5a6" stroke-width="1"/></pattern><rect x="20" y="20" width="60" height="60" fill="url(#grid)"/></svg>';
+
+            div.innerHTML = svgContent;
+            
+            div.onclick = (e) => {
+                e.stopPropagation();
+                this.selectElement(el);
+            };
+
+            // Simple Drag Logic for Element
+            div.onmousedown = (e) => {
+                e.stopPropagation();
+                this.selectElement(el);
+                const shiftX = e.clientX - div.getBoundingClientRect().left;
+                const shiftY = e.clientY - div.getBoundingClientRect().top;
+                
+                const moveAt = (pageX, pageY) => {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    let newLeft = pageX - canvasRect.left - shiftX;
+                    let newTop = pageY - canvasRect.top - shiftY;
+                    
+                    // Snap to grid (20px)
+                    newLeft = Math.round(newLeft / 20) * 20;
+                    newTop = Math.round(newTop / 20) * 20;
+
+                    div.style.left = newLeft + 'px';
+                    div.style.top = newTop + 'px';
+                    el.x = newLeft;
+                    el.y = newTop;
+                };
+
+                const onMouseMove = (event) => moveAt(event.pageX, event.pageY);
+
+                document.addEventListener('mousemove', onMouseMove);
+                div.onmouseup = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    div.onmouseup = null;
+                };
+            };
+
+            canvas.appendChild(div);
+        });
+    },
+
+    selectElement: function(el) {
+        this.selectedElementId = el.id;
+        
+        // Visual selection
+        document.querySelectorAll('.schema-element').forEach(e => e.classList.remove('selected'));
+        document.getElementById(el.id).classList.add('selected');
+
+        // Show properties
+        const panel = document.getElementById('properties-panel');
+        panel.style.display = 'block';
+        document.getElementById('prop-name').value = el.name;
+        document.getElementById('prop-rotation').value = el.rotation;
+        
+        // Populate tags
+        const dev = this.devices.find(d => d.id === this.currentDeviceId);
+        const tagSelect = document.getElementById('prop-tag');
+        tagSelect.innerHTML = '<option value="">-- Нет --</option>';
+        if (dev && dev.variables) {
+            dev.variables.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.id;
+                opt.textContent = `${v.id} (${v.name})`;
+                if (v.id === el.tag) opt.selected = true;
+                tagSelect.appendChild(opt);
+            });
+        }
+        
+        // Save handler
+        document.getElementById('prop-name').onchange = (e) => { el.name = e.target.value; };
+        document.getElementById('prop-tag').onchange = (e) => { el.tag = e.target.value; };
+    },
+
+    updateElementRotation: function(deg) {
+        if (!this.selectedElementId) return;
+        const el = this.schemaElements.find(e => e.id === this.selectedElementId);
+        if (el) {
+            el.rotation = parseInt(deg);
+            document.getElementById(el.id).style.transform = `rotate(${deg}deg)`;
+        }
+    },
+
+    deleteSelectedElement: function() {
+        if (!this.selectedElementId) return;
+        this.schemaElements = this.schemaElements.filter(e => e.id !== this.selectedElementId);
+        this.renderSchemaElements();
+        document.getElementById('properties-panel').style.display = 'none';
+        this.selectedElementId = null;
+    },
+
+    setZoom: function(val) {
+        this.zoom = parseFloat(val);
+        document.getElementById('schema-canvas').style.transform = `scale(${this.zoom})`;
+        document.getElementById('zoom-select').value = val;
+    },
+
+    saveSchema: function() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.schemaElements));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "schema_" + this.currentDeviceId + ".json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    },
+    
+    loadSchema: function() {
+        alert("Функция загрузки JSON (имитация): Выберите файл schema.json");
+        // Implementation would require FileReader
+    },
+
+    controlAction: function(action) {
+        console.log(`Control Command: ${action} sent to Device ${this.currentDeviceId}`);
+        // Visual feedback
+        const btns = document.querySelectorAll('.ctrl-btn');
+        btns.forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // In real app, send Modbus/TCP command here
+    }
+};
+
+// Initialize
+window.onload = () => {
+    app.init();
+    app.setupDropZone();
+};
+
+</script>
+</body>
+</html>
